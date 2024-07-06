@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { jobFormScheme } from "@/lib/form-scheme";
 import { PlusIcon } from "lucide-react";
-import { FC, useRef, useState } from "react";
+import { FC, useEffect, useRef, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 
@@ -39,6 +39,13 @@ const InputSkills: FC<InputSkillsProps> = ({ form, name, label }) => {
       inputRef.current.value = "";
     }
   };
+  useEffect(() => {
+    const val = form.getValues(name);
+
+    if (val && val.length > 0) {
+      setValues(val);
+    }
+  }, [form, name]);
 
   const handleDeleteValue = (item: string) => {
     const skills: any = values.filter((value: string) => item !== value);

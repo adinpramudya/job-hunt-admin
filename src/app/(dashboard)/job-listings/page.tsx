@@ -1,3 +1,4 @@
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import ButtonActionTable from "@/components/organisme/ButtonActionTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,30 @@ import {
 } from "@/components/ui/table";
 import { JOB_LISTING_COLUMN, JOB_LISTING_DATA } from "@/constants";
 import { MoreVertical } from "lucide-react";
+import { getServerSession } from "next-auth";
 import { FC } from "react";
+import prisma from "../../../../lib/prisma";
+import { Job } from "@prisma/client";
+import moment from "moment";
+import { dateFormat } from "@/lib/utils";
 
 interface JobListingsProps {}
+export const revalidate = 0;
 
-const JobListings: FC<JobListingsProps> = ({}) => {
+async function getDataJobs() {
+  const session = await getServerSession(authOptions);
+
+  const jobs = prisma.job.findMany({
+    where: {
+      companyId: session?.user.id,
+    },
+  });
+
+  return jobs;
+}
+
+const JobListings: FC<JobListingsProps> = async ({}) => {
+  const jobs = await getDataJobs();
   return (
     <div>
       <div className="font-semibold text-3xl">Job Listings</div>
@@ -25,29 +45,33 @@ const JobListings: FC<JobListingsProps> = ({}) => {
           <TableHeader>
             <TableRow>
               {JOB_LISTING_COLUMN.map((item: string, i: number) => (
-                <TableHead key={item + 1}>{item}</TableHead>
+                <TableHead key={item + i}>{item}</TableHead>
               ))}
               <TableHead>Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {JOB_LISTING_DATA.map((item: any, i: number) => (
+            {jobs.map((item: Job, i: number) => (
               <TableRow key={item.roles + i}>
                 <TableCell>{item.roles}</TableCell>
                 <TableCell>
-                  <Badge>{item.status}</Badge>
+                  {moment(item.datePosted).isBefore(item.dueDate) ? (
+                    <Badge>Live</Badge>
+                  ) : (
+                    <Badge variant="destructive">Expired</Badge>
+                  )}
                 </TableCell>
-                <TableCell>{item.datePosted}</TableCell>
-                <TableCell>{item.dueDate}</TableCell>
+                <TableCell>{dateFormat(item.datePosted)}</TableCell>
+                <TableCell>{dateFormat(item.dueDate)}</TableCell>
                 <TableCell>
-                  <Badge variant={"outline"}>{item.jobType}</Badge>
+                  <Badge variant="outline">{item.jobType}</Badge>
                 </TableCell>
                 <TableCell>{item.applicants}</TableCell>
                 <TableCell>
                   {item.applicants} / {item.needs}
                 </TableCell>
                 <TableCell>
-                  <ButtonActionTable url="job-detail/1"></ButtonActionTable>
+                  <ButtonActionTable url={`/job-detail/${item.id}`} />
                 </TableCell>
               </TableRow>
             ))}

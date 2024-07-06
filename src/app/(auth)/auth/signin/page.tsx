@@ -15,6 +15,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface SignInProps {}
 
@@ -23,9 +25,22 @@ const SignIn: FC<SignInProps> = ({}) => {
     resolver: zodResolver(signInFormSchema),
   });
 
+  const { toast } = useToast();
+
   const router = useRouter();
   const onSubmit = async (val: z.infer<typeof signInFormSchema>) => {
-    console.log(val);
+    const authenticated = await signIn("credentials", {
+      ...val,
+      redirect: false,
+    });
+    if (authenticated?.error) {
+      toast({
+        title: "Error",
+        description: "Email or Password wrong",
+      });
+      return;
+    }
+    await router.push("/");
   };
 
   return (

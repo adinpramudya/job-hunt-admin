@@ -30,11 +30,25 @@ import { ArrowLeftIcon } from "lucide-react";
 import { FC, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-
+import useSWR from "swr";
+import { fetcher } from "@/lib/utils";
+import { CategoryJob, Job } from "@prisma/client";
+import { useSession } from "next-auth/react";
+import moment from "moment";
+import { useToast } from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
 interface PostJobPageProps {}
 
 const PostJobPage: FC<PostJobPageProps> = ({}) => {
   const [editorLoaded, setEditorLoaded] = useState<boolean>(false);
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const { data: sesssion } = useSession();
+  const { data, error, isLoading } = useSWR<CategoryJob[]>(
+    "api/job/categories",
+    fetcher
+  );
   const form = useForm<z.infer<typeof jobFormScheme>>({
     resolver: zodResolver(jobFormScheme),
     defaultValues: {
@@ -42,8 +56,40 @@ const PostJobPage: FC<PostJobPageProps> = ({}) => {
     },
   });
 
-  const onSubmit = (val: z.infer<typeof jobFormScheme>) => {
-    console.log(val);
+  const onSubmit = async (val: z.infer<typeof jobFormScheme>) => {
+    try {
+      const body: any = {
+        applicants: 0,
+        benefits: val.benefits,
+        categoryId: val.categoryId,
+        companyId: sesssion?.user.id!!,
+        datePosted: moment().toDate(),
+        description: val.jobDescription,
+        dueDate: moment().add(1, "M").toDate(),
+        jobType: val.jobType,
+        needs: 20,
+        niceToHaves: val.niceToHaves,
+        requiredSkills: val.requiredSkills,
+        responsibility: val.responsibility,
+        roles: val.roles,
+        salaryFrom: val.salaryFrom,
+        salaryTo: val.salaryTo,
+        whoYouAre: val.whoYouAre,
+      };
+      await fetch("/api/job", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      await router.push("/job-listings");
+    } catch (error) {
+      console.log(error);
+      toast({
+        title: "Error",
+        description: "Please try again",
+      });
+    }
   };
   useEffect(() => {
     setEditorLoaded(true);
@@ -82,7 +128,7 @@ const PostJobPage: FC<PostJobPageProps> = ({}) => {
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>At least 60 characters</FormDescription>
+                  <FormMessage>At least 20 characters</FormMessage>
                 </FormItem>
               )}
             />
@@ -168,21 +214,20 @@ const PostJobPage: FC<PostJobPageProps> = ({}) => {
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          className="w-[458px]"
-                          placeholder="Select Job Categories"
-                        />
+                      <SelectTrigger className="w-[458px]">
+                        <SelectValue placeholder="Select Job Categories" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="m@example.com">
-                        m@example.com
-                      </SelectItem>
-                      <SelectItem value="m@google.com">m@google.com</SelectItem>
-                      <SelectItem value="m@support.com">
-                        m@support.com
-                      </SelectItem>
+                      {data?.map((item: any) => (
+                        <SelectItem
+                          className="w-[458px]"
+                          key={item.id}
+                          value={item.id}
+                        >
+                          {item.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
 
@@ -223,7 +268,7 @@ const PostJobPage: FC<PostJobPageProps> = ({}) => {
           >
             <CKEditor
               form={form}
-              name="whyYouAre"
+              name="whoYouAre"
               editorLoaded={editorLoaded}
             />
           </FieldInput>

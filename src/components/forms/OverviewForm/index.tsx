@@ -33,22 +33,80 @@ import { Input } from "@/components/ui/input";
 import { EMPLOYEE_OPTIONS, LOCATION_OPTIONS, optionType } from "@/constants";
 import InputSkills from "@/components/organisme/InputSkills";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, fetcher } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import CKEditor from "@/components/organisme/CKEditor";
-interface OverviewFormProps {}
+import useSWR from "swr";
+import { Companyoverview, Industry } from "@prisma/client";
+import { useSession } from "next-auth/react";
+import { useToast } from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
+import { supabaseUploadFile } from "@/lib/supabase";
+interface OverviewFormProps {
+  detail: Companyoverview | undefined;
+}
 
-const OverviewForm: FC<OverviewFormProps> = ({}) => {
+const OverviewForm: FC<OverviewFormProps> = ({ detail }) => {
   const form = useForm<z.infer<typeof overviewFormSchema>>({
     resolver: zodResolver(overviewFormSchema),
+    defaultValues: {
+      dateFounded: detail?.dateFounded,
+      description: detail?.description,
+      employee: detail?.employee,
+      image: detail?.image,
+      industry: detail?.industry,
+      location: detail?.location,
+      name: detail?.name,
+      techStack: detail?.techStack,
+      website: detail?.website,
+    },
   });
+  const { data } = useSWR<Industry[]>("/api/company/industry", fetcher);
   const [editorLoaded, setEditorLoaded] = useState<boolean>(false);
+  const { data: session } = useSession();
+  const { toast } = useToast();
+  const router = useRouter();
   useEffect(() => {
     setEditorLoaded(true);
   }, []);
-  const onSubmit = (val: z.infer<typeof overviewFormSchema>) => {
-    console.log(val);
+  const onSubmit = async (val: z.infer<typeof overviewFormSchema>) => {
+    try {
+      let filename = "";
+
+      if (typeof val.image === "object") {
+        const uploadImg = await supabaseUploadFile(val.image, "company");
+        filename = uploadImg.filename;
+      } else {
+        filename = val.image;
+      }
+
+      const body = {
+        ...val,
+        image: filename,
+        companyId: session?.user.id,
+      };
+
+      await fetch("/api/company/overview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      toast({
+        title: "Success",
+        description: "Edit profile success",
+      });
+
+      router.refresh();
+    } catch (error) {
+      await toast({
+        title: "Error",
+        description: "Please try again",
+      });
+
+      console.log(error);
+    }
   };
 
   return (
@@ -182,13 +240,11 @@ const OverviewForm: FC<OverviewFormProps> = ({}) => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {LOCATION_OPTIONS.map(
-                            (item: optionType, i: number) => (
-                              <SelectItem key={item.id + i} value={item.id}>
-                                {item.label}
-                              </SelectItem>
-                            )
-                          )}
+                          {data?.map((item: Industry) => (
+                            <SelectItem key={item.id} value={item.name}>
+                              {item.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

@@ -4,7 +4,7 @@ import { z } from "zod";
 export const jobFormScheme = z.object({
   roles: z
     .string({ required_error: "Job Title is required" })
-    .min(80, { message: "Job Title must be  at least 80 characters" }),
+    .min(10, { message: "Job Title must be  at least 20 characters" }),
   jobType: z.enum(JOBTYPES, {
     required_error: "You need to select a job type",
   }),
@@ -21,9 +21,9 @@ export const jobFormScheme = z.object({
   responsibility: z
     .string({ required_error: "Responsibility is required" })
     .min(10, { message: "Responsibility must be at least 110 characters" }),
-  whyYouAre: z
-    .string({ required_error: "Why you are is required" })
-    .min(10, { message: "Why you are must be at least 110 characters" }),
+  whoYouAre: z
+    .string({ required_error: "Who you are is required" })
+    .min(10, { message: "Who you are must be at least 110 characters" }),
   niceToHaves: z.string({ required_error: "Nice to have is required" }),
   benefits: z
     .object({
@@ -34,9 +34,7 @@ export const jobFormScheme = z.object({
     .nonempty({ message: "Benefits must be at least 1 benefit" }),
 });
 export const overviewFormSchema = z.object({
-  image: z
-    .any()
-    .refine((item: any) => item?.name, { message: "Image is required" }),
+  image: z.any(),
   name: z.string({ required_error: "Name is required" }),
   website: z.string({ required_error: "Website is required" }),
   location: z.string({ required_error: "Location is required" }),
