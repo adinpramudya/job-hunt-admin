@@ -1,4 +1,3 @@
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import ButtonActionTable from "@/components/organisme/ButtonActionTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import prisma from "../../../../lib/prisma";
 import { Job } from "@prisma/client";
 import moment from "moment";
 import { dateFormat } from "@/lib/utils";
+import { authOptions } from "@/lib/auth";
 
 interface JobListingsProps {}
 export const revalidate = 0;
